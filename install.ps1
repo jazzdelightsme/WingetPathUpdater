@@ -180,35 +180,56 @@ function CalculateAdditions
 ###########################################################################
 ###########################################################################
 
-    $fileMap = @{
+    Write-Verbose "Force: $Force"
+    Write-Verbose "Silent: $Silent"
+    Write-Verbose "SilentWithProgress: $SilentWithProgress"
+    Write-Verbose "Interactive: $Interactive"
+
+    [bool] $quiet = $Silent -or $SilentWithProgress
+
+    $fileMap = [ordered] @{
+        # We do the wingetHelper.ps1 first, because if there is a problem getting that,
+        # the other two won't work.
+        "$env:SystemRoot\System32\wingetHelper.ps1" = $ps1HelperContent
         "$env:SystemRoot\System32\winget.cmd" = $cmdWrapperContent
         "$env:SystemRoot\System32\winget.ps1" = $ps1WrapperContent
-        "$env:SystemRoot\System32\wingetHelper.ps1" = $ps1HelperContent
     }
 
     foreach( $path in $fileMap.Keys )
     {
         if( (Test-Path $path) )
         {
-            Write-Host "Found existing file: " -Fore DarkGray -NoNewline
-            Write-Host $path -Fore DarkYellow -NoNewline
-            Write-Host " ... " -Fore DarkGray -NoNewline
+            if( !$quiet )
+            {
+                Write-Host "Found existing file: " -Fore DarkGray -NoNewline
+                Write-Host $path -Fore DarkYellow -NoNewline
+                Write-Host " ... " -Fore DarkGray -NoNewline
+            }
 
             # If we're pretty sure it came from us, we'll just allow overwriting without
             # -Force.
             if( (Get-Content $path -Raw) -like "*This file is part of the WingetPathUpdater package*" )
             {
-                Write-Host "Looks like it came from us, so we'll just overwrite."
+                if( !$quiet )
+                {
+                    Write-Host "Looks like it came from us, so we'll just overwrite."
+                }
             }
             else
             {
                 if( $Force )
                 {
-                    Write-Host "Honoring -Force switch to allow overwriting." -Fore Yellow
+                    if( !$quiet )
+                    {
+                        Write-Host "Honoring -Force switch to allow overwriting." -Fore Yellow
+                    }
                 }
                 else
                 {
-                    Write-Host ""
+                    if( !$quiet )
+                    {
+                        Write-Host "I don't recognize this file; use -Force if you want to clobber it." -Fore Yellow
+                    }
                     throw "File already exists: $path"
                 }
             }
@@ -225,18 +246,16 @@ function CalculateAdditions
         ErrorAction = 'Stop'
     }
 
-    [bool] $shhhh = $Silent -or $SilentWithProgress
-
     foreach( $path in $fileMap.Keys )
     {
-        if( !$shhhh )
+        if( !$quiet )
         {
             Write-Host "Creating: " -NoNewline ; Write-Host $path -Fore Cyan
         }
         Set-Content -Path $path -Value $fileMap[ $path ] @commonOptions
     }
 
-    if( !$shhhh )
+    if( !$quiet )
     {
         Write-Host "All done!" -Fore Green
 
