@@ -10,9 +10,22 @@ Installers:
   Scope: machine
   InstallerSha256: A421014D095CABEEE6FC966C5970BB83B1FDA9852D90C7BB22A4EFF04E656125
   InstallerSwitches:
-    Silent:             -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -Silent @args;             } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
-    SilentWithProgress: -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -SilentWithProgress @args; } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
-    Interactive:        -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -Interactive @args;        } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
+    # These command lines are pretty beefy... below is a bit of explanation.
+    #
+    # The summary is that at runtime it downloads the script to run, and runs it. It
+    # handles passing in additional custom arguments (from winget's --custom option), and
+    # ensures that powershell will exit with the proper exit code. Most error handling
+    # should be done by the script itself, but we also have some on the command line here
+    # to handle cases like bogus custom options from the user, syntax errors in the
+    # script, etc.
+    #
+    # Note the presence of "$args" in the command: this is to plumb in other command line
+    # args (from winget's --custom option) to the script.
+    #                                                                                                                                                                                                             < run the        >                                                                                                                                                                                                             < be sure to use    >
+    #                    <------- standard powershell stuff -----------> <-------------------------- for legacy PS/.NET, don't accidentally blow up over TLS stuff ------------------------------------->         < following code >        <--------- download this script code from the interwebs -------------------------------------------->    <-- args to the script -->    <-- handles problems like bad custom args or script bugs -->  < correct exit code >
+    Silent:             '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -Silent $args\"             } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
+    SilentWithProgress: '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -SilentWithProgress $args\" } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
+    Interactive:        '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -Interactive $args\"        } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
   ElevationRequirement: elevationRequired
 ManifestType: installer
 ManifestVersion: 1.4.0
