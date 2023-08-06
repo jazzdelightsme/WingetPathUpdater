@@ -1,0 +1,18 @@
+# Created using wingetcreate 1.2.8.0
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.4.0.schema.json
+
+PackageIdentifier: jazzdelightsme.WingetPathUpdater
+PackageVersion: 1.0
+Installers:
+- InstallerUrl: https://github.com/jazzdelightsme/PowershellStub/releases/download/v1.0/PowershellStub.exe
+  Architecture: x64
+  InstallerType: exe
+  Scope: machine
+  InstallerSha256: A421014D095CABEEE6FC966C5970BB83B1FDA9852D90C7BB22A4EFF04E656125
+  InstallerSwitches:
+    Silent:             -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -Silent @args;             } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
+    SilentWithProgress: -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -SilentWithProgress @args; } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
+    Interactive:        -NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { C:\src\WingetPathUpdater\install.ps1 -Interactive @args;        } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }
+  ElevationRequirement: elevationRequired
+ManifestType: installer
+ManifestVersion: 1.4.0
