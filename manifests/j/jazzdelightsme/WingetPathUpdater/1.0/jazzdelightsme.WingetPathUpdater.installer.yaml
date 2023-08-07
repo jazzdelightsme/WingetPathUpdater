@@ -8,7 +8,7 @@ Installers:
   Architecture: x64
   InstallerType: exe
   Scope: machine
-  InstallerSha256: A421014D095CABEEE6FC966C5970BB83B1FDA9852D90C7BB22A4EFF04E656125
+  InstallerSha256: F0E3AAC6D5605D7507BE86D81F55092FC88D4AF53FC85AF9D4CFAF6DB7C876A4
   InstallerSwitches:
     # These command lines are pretty beefy... below is a bit of explanation.
     #
