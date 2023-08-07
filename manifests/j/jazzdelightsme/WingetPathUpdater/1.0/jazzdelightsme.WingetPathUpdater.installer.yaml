@@ -20,9 +20,15 @@ Installers:
     # script, etc.
     #
     # Note the presence of "$args" in the command: this is to plumb in other command line
-    # args (from winget's --custom option) to the script.
+    # args (from winget's --custom option) to the script. Example:
+    #
+    #     winget install jazzdelightsme.WingetPathUpdater -i --custom "-Force -Verbose"
+    #
+    # Also, a handy trick for testing out changes to the script is to either change the
+    # URL, *or* you could even just use a local file by replacing "Invoke-WebRequest url"
+    # with "Get-Content -Raw path/to/local/file".
     #                                                                                                                                                                                                             < run the        >                                                                                                                                                                                                             < be sure to use    >
-    #                    <------- standard powershell stuff -----------> <-------------------------- for legacy PS/.NET, don't accidentally blow up over TLS stuff ------------------------------------->         < following code >        <--------- download this script code from the interwebs -------------------------------------------->    <-- args to the script -->    <-- handles problems like bad custom args or script bugs -->  < correct exit code >
+    #                    <------- standard powershell.exe args --------> <-------------------------- for legacy PS/.NET, don't accidentally blow up over TLS stuff ------------------------------------->         < following code >        <--------- download this script code from the interwebs -------------------------------------------->    <-- args to the script -->    <-- handles problems like bad custom args or script bugs -->  < correct exit code >
     Silent:             '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -Silent $args\"             } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
     SilentWithProgress: '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -SilentWithProgress $args\" } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
     Interactive:        '-NoProfile -ExecutionPolicy Bypass -Command . { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 ; try { Invoke-Expression \"& { $(Invoke-WebRequest https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/install.ps1) } -Interactive $args\"        } catch { Write-Error $_ ; Start-Sleep -Seconds 10 ; exit -2 } ; exit $LastExitCode }'
