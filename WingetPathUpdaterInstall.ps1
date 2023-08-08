@@ -48,7 +48,7 @@ try
         throw "This script must be run elevated."
     }
 
-    $baseUrl = 'https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/main/'
+    $baseUrl = 'https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/v1.0/'
 
     $fileUrls = [ordered] @{
         # We do the wingetHelper.ps1 first, because if there is a problem getting that,
