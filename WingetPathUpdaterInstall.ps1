@@ -16,17 +16,86 @@ param( [switch] $Force,
 
        [switch] $InstallTests,
 
-       [switch] $Uninstall
+       [switch] $Uninstall,
+
+       [string] $LogPath
      )
 
 try
 {
+    if( $LogPath )
+    {
+        "===================" | Out-File -FilePath $LogPath -Encoding UTF8 -Append
+        (Get-Date).ToString() | Out-File -FilePath $LogPath -Encoding UTF8 -Append
+    }
+
+    [bool] $quiet = $Silent -or $SilentWithProgress
+
+    $realWriteVerbose = Get-Command Write-Verbose
+    $realWriteHost    = Get-Command Write-Host
+
+    function Write-Verbose
+    {
+        [CmdletBinding(RemotingCapability='None')]
+        param(
+            [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
+            [Alias('Msg')]
+            [AllowEmptyString()]
+            [string] ${Message}
+        )
+
+        if ($LogPath)
+        {
+            "VERBOSE: $Message" | Out-File -FilePath $LogPath -Encoding UTF8 -Append
+        }
+
+        & $realWriteVerbose @PSBoundParameters
+    }
+
+    function Write-Host
+    {
+        [CmdletBinding(RemotingCapability='None')]
+        param(
+            [Parameter(Position = 0, ValueFromPipeline, ValueFromRemainingArguments)]
+            [Alias('Msg','Message')]
+            [System.Object]
+            ${Object},
+
+            [switch]
+            ${NoNewline},
+
+            [System.Object]
+            ${Separator},
+
+            [System.ConsoleColor]
+            ${ForegroundColor},
+
+            [System.ConsoleColor]
+            ${BackgroundColor}
+        )
+
+        if ($LogPath)
+        {
+            "$Object" | Out-File -FilePath $LogPath -Encoding UTF8 -Append -NoNewline:$NoNewline
+        }
+
+        if( !$quiet )
+        {
+            & $realWriteHost @PSBoundParameters
+        }
+    }
+
     Write-Verbose "Force: $Force"
     Write-Verbose "Silent: $Silent"
     Write-Verbose "SilentWithProgress: $SilentWithProgress"
     Write-Verbose "Interactive: $Interactive"
+    Write-Verbose "LogPath: $LogPath"
 
-    [bool] $quiet = $Silent -or $SilentWithProgress
+    if( $quiet -and $Interactive )
+    {
+        $quiet = $false
+        Write-Host "(-Interactive trumps silence)" -Fore Yellow
+    }
 
     function Test-Administrator
     {
@@ -71,7 +140,7 @@ try
     {
         if( (Test-Path $path) )
         {
-            if( !$quiet -and !$Uninstall )
+            if( !$Uninstall )
             {
                 Write-Host "Found existing file: " -Fore DarkGray -NoNewline
                 Write-Host $path -Fore DarkYellow -NoNewline
@@ -82,7 +151,7 @@ try
             # -Force.
             if( (Get-Content $path -Raw) -like "*This file is part of the WingetPathUpdater package*" )
             {
-                if( !$quiet -and !$Uninstall )
+                if( !$Uninstall )
                 {
                     Write-Host "Looks like it came from us, so we'll just overwrite."
                 }
@@ -91,17 +160,14 @@ try
             {
                 if( $Force )
                 {
-                    if( !$quiet -and !$Uninstall )
+                    if( !$Uninstall )
                     {
                         Write-Host "Honoring -Force switch to allow overwriting." -Fore Yellow
                     }
                 }
                 else
                 {
-                    if( !$quiet )
-                    {
-                        Write-Host "I don't recognize this file; use -Force if you want to clobber it." -Fore Yellow
-                    }
+                    Write-Host "I don't recognize this file; use -Force if you want to clobber it." -Fore Yellow
                     throw "File already exists: $path"
                 }
             }
@@ -111,17 +177,14 @@ try
         {
             $url = $fileUrls[ $path ]
 
-            if( !$quiet )
-            {
-                Write-Host "fetching: $url" -Fore DarkGray
-            }
+            Write-Host "fetching: $url" -Fore DarkGray
 
             # This will be quick; let's not have a flash of progress bar.
             $oldPref = $global:ProgressPreference
             $global:ProgressPreference = 'SilentlyContinue'
             try
             {
-                $response = Invoke-WebRequest $url
+                $response = Invoke-WebRequest $url -UseBasicParsing
             }
             finally
             {
@@ -147,10 +210,7 @@ try
     {
         foreach( $path in $fileUrls.Keys )
         {
-            if( !$quiet )
-            {
-                Write-Host "Removing $path" -Fore DarkCyan
-            }
+            Write-Host "Removing $path" -Fore DarkCyan
 
             # The file might not actually be there, like for the test file if the original
             # install didn't install the tests (which would be the common case).
@@ -163,10 +223,7 @@ try
             }
         }
 
-        if( !$quiet )
-        {
-            Write-Host "Removing ARP entry..." -Fore DarkCyan
-        }
+        Write-Host "Removing ARP entry..." -Fore DarkCyan
 
         $null = reg.exe delete $keyPath /f
         if( $global:LastExitCode )
@@ -191,17 +248,11 @@ try
 
         foreach( $path in $fileContents.Keys )
         {
-            if( !$quiet )
-            {
-                Write-Host "Creating: " -NoNewline ; Write-Host $path -Fore Cyan
-            }
+            Write-Host "Creating: " -NoNewline ; Write-Host $path -Fore Cyan
             Set-Content -Path $path -Value $fileContents[ $path ] @commonOptions
         }
 
-        if( !$quiet )
-        {
-            Write-Host "Creating ARP entry..." -Fore Cyan
-        }
+        Write-Host "Creating ARP entry..." -Fore Cyan
 
         #
         # Since the winget manifest describes how to install an app, you might think that
@@ -264,6 +315,11 @@ try
 catch
 {
     Write-Error $_
+
+    if( $LogPath )
+    {
+        $_ | Format-List * -Force | Out-String | Out-File -FilePath $LogPath -Encoding UTF8 -Append
+    }
 
     if( $Interactive )
     {
