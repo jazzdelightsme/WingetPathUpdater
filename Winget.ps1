@@ -1,5 +1,5 @@
 # This wrapper script is a straight "pass-through" to winget.exe, and then after running
-# an install, it will update your in-process Path environment variables (in your current
+# an install, it will update your in-process environment variables (in your current
 # shell).
 #
 # This file is part of the WingetPathUpdater package.
@@ -10,22 +10,19 @@
 
 try
 {
-    $pathBefore = ''
-    $psModulePathBefore = ''
+    $varsBefore = $null
     if( $args -and ($args.Length -gt 0) -and ($args[ 0 ] -eq 'install') )
     {
         . $PSScriptRoot\wingetHelper.ps1
 
-        $pathBefore = GetStaticPathFromRegistry 'PATH'
-        $psModulePathBefore = GetStaticPathFromRegistry 'PSModulePath'
+        $varsBefore = GetAllEnvVarsFromRegistry
     }
 
     winget.exe @args
 
-    if( $pathBefore )
+    if( $varsBefore )
     {
-        UpdateCurrentProcessPathBasedOnDiff 'PATH' $pathBefore
-        UpdateCurrentProcessPathBasedOnDiff 'PSModulePath' $psModulePathBefore
+        UpdateCurrentProcessPathBasedOnDiff $varsBefore
     }
 }
 catch
