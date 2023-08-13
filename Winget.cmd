@@ -4,30 +4,32 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 REM This wrapper script is a straight "pass-through" to winget.exe, and then after running
 REM an install, it will update your in-process PATH environment variable.
 
+REM The following line is important for the installer script:
 REM This file is part of the WingetPathUpdater package.
 
 IF "%1" == "install" (
-    SET TheHelperCommand=powershell.exe -NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command . %~dp0wingetHelper.ps1 ; GetStaticPathFromRegistry PATH
+    SET TheHelperCommand=powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command . %~dp0wingetHelper.ps1 ; StoreStaticPathFromRegistry
     FOR /F "tokens=* USEBACKQ" %%i IN (`!TheHelperCommand!`) DO (
         SET StaticPathBefore=%%i
     )
+    REM ECHO StaticPathBefore is: !StaticPathBefore!
 )
 
 winget.exe %*
 
 IF NOT "%StaticPathBefore%" == "" (
-    FOR /F "tokens=* USEBACKQ" %%i IN (`!TheHelperCommand!`) DO (
-        SET StaticPathAfter=%%i
-    )
 
-    SET TheHelperCommand=powershell.exe -NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command . %~dp0wingetHelper.ps1 ; CalculateAdditions 'PATH' '%StaticPathBefore%' '!StaticPathAfter!'
+    SET TheHelperCommand=powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command . %~dp0wingetHelper.ps1 ; GenerateAdditionsCmd \"%PSModulePath%\" \"%StaticPathBefore%\"
 
     FOR /F "tokens=* USEBACKQ" %%i IN (`!TheHelperCommand!`) DO (
-        SET Additions=%%i
+        SET ScriptToUpdateEnvironment=%%i
     )
-    REM ECHO Additions are: !Additions!
+    ECHO ScriptToUpdateEnvironment is: !ScriptToUpdateEnvironment!
+
+    del "%StaticPathBefore%"
 )
 
-IF NOT "%Additions%" == "" (
-    ENDLOCAL & SET PATH=%PATH%;%Additions%
+IF NOT "%ScriptToUpdateEnvironment%" == "" (
+    REM ECHO Updating local environment block
+    ENDLOCAL & CALL %ScriptToUpdateEnvironment% & del %ScriptToUpdateEnvironment%
 )

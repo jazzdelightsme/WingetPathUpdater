@@ -117,7 +117,7 @@ try
         throw "This script must be run elevated."
     }
 
-    $baseUrl = 'https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/v1.0/'
+    $baseUrl = 'https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/v1.1/'
 
     $fileUrls = [ordered] @{
         # We do the wingetHelper.ps1 first, because if there is a problem getting that,
@@ -132,6 +132,7 @@ try
     if( $InstallTests -or $Uninstall )
     {
         $fileUrls[ "$env:SystemRoot\System32\wingetHelper.Tests.ps1" ] = "${baseUrl}WingetHelper.Tests.ps1"
+        $fileUrls[ "$env:SystemRoot\System32\RunWingetPathUpdaterTests.ps1" ] = "${baseUrl}RunWingetPathUpdaterTests.ps1"
     }
 
     $fileContents = [ordered] @{ }
