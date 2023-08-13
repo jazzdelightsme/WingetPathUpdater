@@ -1,3 +1,4 @@
+# The following line is important for the installer:
 # This file is part of the WingetPathUpdater package.
 #
 # Split out for mocking.

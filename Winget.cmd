@@ -4,6 +4,7 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 REM This wrapper script is a straight "pass-through" to winget.exe, and then after running
 REM an install, it will update your in-process PATH environment variable.
 
+REM The following line is important for the installer script:
 REM This file is part of the WingetPathUpdater package.
 
 IF "%1" == "install" (

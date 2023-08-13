@@ -2,6 +2,7 @@
 # an install, it will update your in-process environment variables (in your current
 # shell).
 #
+# The following line is important for the installer:
 # This file is part of the WingetPathUpdater package.
 #
 # N.B. This is a "simple function" (as opposed to an "advanced function") (no

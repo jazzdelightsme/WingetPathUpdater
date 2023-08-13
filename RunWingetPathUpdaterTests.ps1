@@ -1,14 +1,15 @@
 <#
 .SYNOPSIS
-    Runs the tests, including checking code coverage.
-
-    This file is part of the WingetPathUpdater package.
+    Runs the WingetPathUpdater tests, including checking code coverage.
 #>
 [CmdletBinding()]
 param()
 
 try
 {
+    # The following line is important for the installer:
+    # This file is part of the WingetPathUpdater package.
+    #
     pushd $PSScriptRoot
 
     if( !(Get-Module Pester) )
