@@ -33,8 +33,9 @@ try
         'GetEnvVar',
         'UpdateCurrentProcessEnvironment'
 
-        # Only used by winget.cmd:
+        # Only used by winget.cmd (winget.cmd tested manually):
         'StoreStaticPathFromRegistry'
+        'GenerateAdditionsCmd'
     )
 
     $missedCodePaths = @( $result.CodeCoverage.CommandsMissed | Where-Object Function -NotIn $shouldBeMissed )

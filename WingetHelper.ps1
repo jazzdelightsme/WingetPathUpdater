@@ -71,6 +71,8 @@ function CalculateDiffToApply
         {
             if( !$Before.ContainsKey( $key ) )
             {
+                # Write-Verbose "New key: $key"
+
                 $currentInMemory = GetEnvVar $key 'Process'
 
                 if( $currentInMemory )
@@ -92,6 +94,8 @@ function CalculateDiffToApply
             }
             elseif( $Before[ $key ] -ne $After[ $key ] )
             {
+                # Write-Verbose "Updated key: $key"
+
                 if( Test-IsPathLikeVar $key )
                 {
                     $addedPaths = @()
@@ -143,6 +147,10 @@ function CalculateDiffToApply
                     }
                 }
             }
+            else
+            {
+                # Write-Verbose "Unchanged key: $key"
+            }
         }
 
         return $diff
@@ -180,4 +188,100 @@ function GetAllEnvVarsFromRegistry
 
     return $combined
 }
+
+#
+# Support for winget.cmd:
+#
+
+# Writes the "static" (as stored in the registry) environment block (combines
+# the Machine and User values) to a file, and returns the path to that file.
+# Note that this may be significantly different than the "live" environment
+# values in the memory of the current process.
+function StoreStaticPathFromRegistry
+{
+    [CmdletBinding()]
+    param()
+
+    try
+    {
+        $vars = GetAllEnvVarsFromRegistry
+
+        $f = (Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())) + '.clixml'
+
+        Export-CliXml -InputObject $vars -Path $f -EA Stop
+
+        return $f
+    }
+    finally { }
+}
+
+# Generates a .cmd script which the calling cmd.exe process can call to update its
+# environment. (Returns the path to the .cmd.)
+function GenerateAdditionsCmd
+{
+    [CmdletBinding()]
+    param( [string] $PSModulePathVal, [string] $BeforeFile )
+
+    try
+    {
+        $before = Import-CliXml $BeforeFile -EA Stop
+        $after = GetAllEnvVarsFromRegistry
+
+        Write-Verbose "Have before and after now..."
+
+        # The current PS process has updated the PSModulePath environment variable
+        # in-memory. But for the cmd.exe process, we don't want to take those
+        # modifications into account (they will be gone as soon as we exit). So we are
+        # going to replace the current (in-memory) PSModulePath value with the value from
+        # our parent cmd.exe process, for diff'ing purposes.
+        #
+        # (Modifying PSModulePath like this is somewhat risky to the health of the current
+        # PowerShell process... but the idea is that this process has already loaded
+        # everything it needs, and will be exiting very shortly.)
+        $env:PSModulePath=$PSModulePathVal
+
+        $diff = CalculateDiffToApply $before $after
+
+        if( $diff.Count )
+        {
+            $f = (Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())) + '.cmd'
+
+            $lines = [System.Collections.Generic.List[string]]::new()
+            $lines.Add( '@ECHO OFF' )
+
+            foreach( $name in $diff.Keys )
+            {
+                $lines.Add( "SET $name=$($diff[ $name ])" )
+            }
+
+            [System.IO.File]::WriteAllLines( $f, $lines.ToArray() )
+
+            return $f
+        }
+    }
+    finally { }
+}
+
+<# Useful for testing winget.cmd: replace the winget.exe there with a call to:
+
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command . %~dp0wingetHelper.ps1 ; FakeDoStuff
+
+function FakeDoStuff
+{
+    [CmdletBinding()]
+    param()
+
+    try
+    {
+        $oldPath = [System.Environment]::GetEnvironmentVariable( 'PATH', 'User' )
+        $newPath = $oldPath + ';NEW_VALUE_WOO'
+        [System.Environment]::SetEnvironmentVariable( 'PATH', $newPath, 'User' )
+
+        $oldPath = [System.Environment]::GetEnvironmentVariable( 'PSModulePath', 'User' )
+        $newPath = $oldPath + ';OTHER_NEW_VALUE_YEAH'
+        [System.Environment]::SetEnvironmentVariable( 'PSModulePath', $newPath, 'User' )
+    }
+    finally { }
+}
+#>
 
