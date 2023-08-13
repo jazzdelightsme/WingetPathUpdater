@@ -200,4 +200,23 @@ Describe 'winget.ps1' {
             ($DiffToApply[ 'VIMRUNTIME' ] -eq 'hi')
         }
     }
+
+    It 'should NOT update vars that WERE customized in-memory' {
+
+        # The var that winget is going to update in the registry has been modified
+        # in-memory:
+        $script:FakeRegistry[ 'Process' ][ 'VIMRUNTIME' ] = 'something else'
+
+        Mock winget.exe {
+            # Simulate install updating the registry:
+            $script:FakeRegistry[ 'Machine' ][ 'VIMRUNTIME' ] = 'hi'
+        }
+
+        # N.B. Dot sourcing here is important, so that it executes in the current scope.
+        . $PSScriptRoot\winget.ps1 install something
+
+        Should -Invoke -CommandName 'GetAllEnvVars' -Exactly 4 # 2 for "before", 2 for "after"
+        Should -Invoke -CommandName 'GetEnvVar' -Exactly 1 # once for each new var, to check in-memory value
+        Should -Invoke -CommandName 'UpdateCurrentProcessEnvironment' -Exactly 0
+    }
 }

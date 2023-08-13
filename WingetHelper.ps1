@@ -19,19 +19,6 @@ function GetEnvVar
     return [string] ([System.Environment]::GetEnvironmentVariable( $EnvVarName, $Target ))
 }
 
-# Gets the "static" (as stored in the registry) value of a specified PATH-style
-# environment variable (combines the Machine and User values with ';'). Note that this may
-# be significantly different than the "live" environment value in the memory of the
-# current process.
-<#
-function GetStaticPathFromRegistry
-{
-    [CmdletBinding()]
-    param( $EnvVarName )
-
-    (@( 'Machine', 'User' ) | ForEach-Object { GetEnvVar $EnvVarName $_ }) -join ';'
-} #>
-
 # Split out for mocking.
 function UpdateCurrentProcessEnvironment
 {
@@ -52,11 +39,11 @@ function UpdateCurrentProcessPathBasedOnDiff
 
     $after = GetAllEnvVarsFromRegistry
 
-    $additions = CalculateAdditions $VarsBefore $after
+    $diff = CalculateDiffToApply $VarsBefore $after
 
-    if( $additions.Count )
+    if( $diff.Count )
     {
-        UpdateCurrentProcessEnvironment $additions
+        UpdateCurrentProcessEnvironment $diff
     }
 }
 
@@ -68,7 +55,10 @@ function Test-IsPathLikeVar
     return @( 'PATH', 'PSModulePath' ) -contains $VarName
 }
 
-function CalculateAdditions
+# Returns a hashtable of environment variables that need to be applied. We only handle
+# additions (new variables, or added paths to PATH-like variables) and updates (changes to
+# existing variables) (so no deletions, nor ordering changes).
+function CalculateDiffToApply
 {
     [CmdletBinding()]
     param( $Before, $After )
@@ -170,7 +160,11 @@ function GetAllEnvVarsFromRegistry
     # Machine-level value may turn out to become a no-op because it's overridden by a user
     # var.
 
-    $combined = $allMachine.Clone()
+    # We copy into a fresh hashtable, because PS's hashtables are case-insenstive by
+    # default, whereas the hashtable from [Environment]::GetEnvironmentVariables() is
+    # case-*sensitive*.
+    $combined = @{}
+    $allMachine.Keys | ForEach-Object { $combined[ $_ ] = $allMachine[ $_ ] }
 
     foreach( $key in $allUser.Keys )
     {

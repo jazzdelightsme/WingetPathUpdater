@@ -23,10 +23,19 @@ try
         throw "You need a newer Pester: Install-Module Pester -Force -SkipPublisherCheck"
     }
 
+    Remove-Item .\coverage.xml -Force -EA Ignore
     $result = invoke-pester .\WingetHelper.Tests.ps1 -CodeCoverage .\WingetHelper.ps1 -PassThru
 
-    # These commands *should* be missed: they are mocked!
-    $shouldBeMissed = @( 'GetAllEnvVars', 'GetEnvVar', 'UpdateCurrentProcessEnvironment' )
+    # These commands *should* NOT be covered by code coverage:
+    $shouldBeMissed = @(
+        # These are mocked:
+        'GetAllEnvVars',
+        'GetEnvVar',
+        'UpdateCurrentProcessEnvironment'
+
+        # Only used by winget.cmd:
+        'StoreStaticPathFromRegistry'
+    )
 
     $missedCodePaths = @( $result.CodeCoverage.CommandsMissed | Where-Object Function -NotIn $shouldBeMissed )
 
