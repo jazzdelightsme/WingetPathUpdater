@@ -26,6 +26,8 @@ Practically speaking, what this means is that when you run the installer for `Ne
 
 And, unfortunately, our favorite Windows package manager, `winget` is also subject to this problem. There is a veritable *river* of tears in: https://github.com/microsoft/winget-cli/issues/549
 
+(Clarification: there are actually **two** `PATH`-related problems there: one is that your console's environment variables are not updated after running `winget`, which is the problem addressed by this project (WingetPathUpdater). The *other* problem is that some packages (`vim.vim`, for example, as of this writing) do not update `PATH` **at all!** (So even when you open a new console window, or even reboot, running `vim` doesn't work.) In my opinion, a package author should fix that (the installer should update `PATH`); but some people think it would be nice if `winget` manifests could also have some sort of facility to update `PATH` on behalf on an installer.)
+
 ## The solution
 
 Ideally, this problem would be handled by the package manager itself, right?
