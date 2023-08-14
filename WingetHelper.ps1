@@ -21,15 +21,69 @@ function GetEnvVar
 }
 
 # Split out for mocking.
+function ExpandEnvironmentVariables( $str )
+{
+    return [System.Environment]::ExpandEnvironmentVariables( $str )
+}
+
+# Split out for mocking.
+function SetEnvVar( $name, $val )
+{
+    Set-Content Env:\$name -Value $val
+}
+
+# Split out for mocking.
 function UpdateCurrentProcessEnvironment
 {
     [CmdletBinding()]
     param( $DiffToApply )
 
-    foreach( $name in $DiffToApply.Keys )
+    # There are some not-immediately-obvious things we need to consider:
+    #
+    #   1. Sometimes people embed "unexpanded" environment variable names into other
+    #      environment variable values (like putting the literal string "%NVM_HOME%" into
+    #      PATH). So we need to handle expanding values.
+    #
+    #   2. That means there are "dependencies" between setting values! Because if we have
+    #      these values:
+    #
+    #          PATH=C:\windows\system32;%NVM_HOME%
+    #          NVM_HOME=C:\whatever
+    #
+    #      Then it matters what order we set those values in.
+    #
+    # One way to deal with that would be to try to determine the "correct" order. But
+    # there's a simpler algorithm: just keep applying them all, until there are no more
+    # changes (given the problem domain, this is unlikely to result in more than a couple
+    # extra passes).
+
+    [bool] $madeAChange = $false
+    [int] $numPasses = 0
+    do
     {
-        Set-Content Env:\$name -Value ($DiffToApply[ $name ])
-    }
+        $numPasses += 1
+        if( $numPasses -gt 10 )
+        {
+            throw "Unexpected: pathological environment variable dependency depth."
+        }
+
+        $madeAChange = $false
+        foreach( $name in $DiffToApply.Keys )
+        {
+            $oldVal = GetEnvVar $name 'Process'
+
+            # Handle expanding environment variables:
+            $newVal = ExpandEnvironmentVariables ($DiffToApply[ $name ])
+
+            SetEnvVar $name $newVal
+
+            if( $oldVal -ne $newVal )
+            {
+                $madeAChange = $true
+            }
+        }
+
+    } while( $madeAChange )
 }
 
 

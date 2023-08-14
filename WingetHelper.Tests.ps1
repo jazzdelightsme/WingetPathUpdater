@@ -220,4 +220,123 @@ Describe 'winget.ps1' {
         Should -Invoke -CommandName 'GetEnvVar' -Exactly 1 # once for each new var, to check in-memory value
         Should -Invoke -CommandName 'UpdateCurrentProcessEnvironment' -Exactly 0
     }
+
+    It 'should handle dependencies between values' {
+
+        # Need to remove the do-nothing mock:
+        Remove-Item Alias:\UpdateCurrentProcessEnvironment -Force
+
+        Mock SetEnvVar {
+            $script:FakeRegistry[ 'Process' ][ $name ] = $val
+        }
+
+        Mock ExpandEnvironmentVariables {
+            # Note that we might not handle pathological cases (like a single '%' in
+            # multiple paths in PATH) the same way as the system might... but that's not
+            # important for testing.
+
+            $mc = [regex]::Matches( $str, '%(?<varName>[^;%]*)%' )
+
+            if( $mc.Count -eq 0 )
+            {
+                return $str
+            }
+
+            # We'll walk through the matches, copying from the source string and then
+            # from the match (if applicable).
+            $dest = [System.Text.StringBuilder]::new()
+
+            $lastIdx = 0 # last index that we accounted for from the source string
+            for( [int] $i = 0; $i -lt $mc.Count; $i++ )
+            {
+                $m = $mc[ $i ]
+
+                # Take anything from the source string (that we haven't taken already), up
+                # to this match:
+                $null = $dest.Append( $str, $lastIdx, ($m.Index - $lastIdx) )
+
+                # Q: Does the environment variable actually have a value?
+                $varName = $m.Groups['varName'].Value
+
+                if( $script:FakeRegistry[ 'Process' ].ContainsKey( $varName ) )
+                {
+                    # A: It does!
+                    $val = $script:FakeRegistry[ 'Process' ][ $varName ]
+                    $null = $dest.Append( $val )
+                }
+                else
+                {
+                    # A: It does not.
+                    $null = $dest.Append( $str, $m.Index, $m.Length )
+                }
+
+                $lastIdx = $m.Index + $m.Length
+            }
+
+            # Remember to get the last bit from the source:
+            if( $lastIdx -lt $str.Length )
+            {
+                $null = $dest.Append( $str, $lastIdx, $str.Length - $lastIdx )
+            }
+
+            return $dest.ToString()
+        }
+
+        # Self-test our mock:
+
+        ExpandEnvironmentVariables '' | Should -Be ''
+        ExpandEnvironmentVariables 'hi' | Should -Be 'hi'
+        ExpandEnvironmentVariables '%hi%' | Should -Be '%hi%'
+        ExpandEnvironmentVariables '%%' | Should -Be '%%'
+        ExpandEnvironmentVariables '%' | Should -Be '%'
+        ExpandEnvironmentVariables 'x%hi%x' | Should -Be 'x%hi%x'
+        ExpandEnvironmentVariables 'dircmd' | Should -Be 'dircmd'
+        ExpandEnvironmentVariables '%dircmd' | Should -Be '%dircmd'
+        ExpandEnvironmentVariables 'dircmd%' | Should -Be 'dircmd%'
+        ExpandEnvironmentVariables '%dircmd%' | Should -Be '/a'
+        ExpandEnvironmentVariables 'x%dircmd%x' | Should -Be 'x/ax'
+        ExpandEnvironmentVariables '%FOO%' | Should -Be 'user-override'
+        ExpandEnvironmentVariables '%foo%' | Should -Be 'user-override'
+        ExpandEnvironmentVariables '%FOO%FOO%' | Should -Be 'user-overrideFOO%'
+        ExpandEnvironmentVariables '%FOO%%FOO%' | Should -Be 'user-overrideuser-override'
+        ExpandEnvironmentVariables '%FOO%;%dircmd%' | Should -Be 'user-override;/a'
+        ExpandEnvironmentVariables '%FOO%;%dircmd%;%notDefinedYet%' | Should -Be 'user-override;/a;%notDefinedYet%'
+
+        # Okay, now we can test our winget wrapper:
+
+        Mock winget.exe {
+            # Simulate install updating the registry with values that depend on each
+            # other:
+            $script:FakeRegistry[ 'Machine' ][ 'BASE_THING' ] = 'hi'
+            $script:FakeRegistry[ 'Machine' ][ 'VIMRUNTIME' ] = '%BASE_THING%-there'
+            $script:FakeRegistry[ 'Machine' ][ 'Path' ] = $script:FakeRegistry[ 'Machine' ][ 'Path' ] + ';%VIMRUNTIME%'
+
+            # For fun, let's try some crazier scenarios:
+            $script:FakeRegistry[ 'Machine' ][ 'A' ] = 'found it'
+            $script:FakeRegistry[ 'Machine' ][ 'B' ] = '%A%'
+            $script:FakeRegistry[ 'Machine' ][ 'C' ] = '%B%'
+            $script:FakeRegistry[ 'Machine' ][ 'D' ] = '%C%'
+
+            # Note that something like this does not work (where "work" would mean "I"
+            # eventually gets set to "hi"): we don't handle recursive definitions like
+            # this. However, the system doesn't either, so we *shouldn't*.
+          # $script:FakeRegistry[ 'Machine' ][ 'E' ] = 'hi'
+          # $script:FakeRegistry[ 'Machine' ][ 'F' ] = 'E'
+          # $script:FakeRegistry[ 'Machine' ][ 'G' ] = 'F'
+          # $script:FakeRegistry[ 'Machine' ][ 'H' ] = 'G'
+          # $script:FakeRegistry[ 'Machine' ][ 'I' ] = '%%%%H%%%%'
+        }
+
+        # N.B. Dot sourcing here is important, so that it executes in the current scope.
+        . $PSScriptRoot\winget.ps1 install something
+
+        $script:FakeRegistry[ 'Process' ][ 'BASE_THING' ] | Should -Be 'hi'
+        $script:FakeRegistry[ 'Process' ][ 'VIMRUNTIME' ] | Should -Be 'hi-there'
+        $script:FakeRegistry[ 'Process' ][ 'Path' ] | Should -Be 'testPath1;testPath2;testPath3;runtimePath1;hi-there'
+
+        $script:FakeRegistry[ 'Process' ][ 'A' ] | Should -Be 'found it'
+        $script:FakeRegistry[ 'Process' ][ 'B' ] | Should -Be 'found it'
+        $script:FakeRegistry[ 'Process' ][ 'C' ] | Should -Be 'found it'
+        $script:FakeRegistry[ 'Process' ][ 'D' ] | Should -Be 'found it'
+    }
 }

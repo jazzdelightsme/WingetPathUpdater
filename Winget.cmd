@@ -24,7 +24,7 @@ IF NOT "%StaticPathBefore%" == "" (
     FOR /F "tokens=* USEBACKQ" %%i IN (`!TheHelperCommand!`) DO (
         SET ScriptToUpdateEnvironment=%%i
     )
-    ECHO ScriptToUpdateEnvironment is: !ScriptToUpdateEnvironment!
+    REM ECHO ScriptToUpdateEnvironment is: !ScriptToUpdateEnvironment!
 
     del "%StaticPathBefore%"
 )
