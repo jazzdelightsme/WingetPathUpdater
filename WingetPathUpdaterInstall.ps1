@@ -18,7 +18,10 @@ param( [switch] $Force,
 
        [switch] $Uninstall,
 
-       [string] $LogPath
+       [string] $LogPath,
+
+       # Useful for testing a new version.
+       [string] $Tag = 'v1.1'
      )
 
 try
@@ -90,6 +93,7 @@ try
     Write-Verbose "SilentWithProgress: $SilentWithProgress"
     Write-Verbose "Interactive: $Interactive"
     Write-Verbose "LogPath: $LogPath"
+    Write-Verbose "Tag: $Tag"
 
     if( $quiet -and $Interactive )
     {
@@ -121,7 +125,7 @@ try
     # plus the version info in the ARP registry values (DisplayVersion and
     # VersionMajor/VersionMinor). (And then each winget manifest has the installer version
     # as well, plus the URL of this script.)
-    $baseUrl = 'https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/v1.1/'
+    $baseUrl = "https://raw.githubusercontent.com/jazzdelightsme/WingetPathUpdater/$Tag/"
 
     $fileUrls = [ordered] @{
         # We do the wingetHelper.ps1 first, because if there is a problem getting that,

@@ -4,8 +4,8 @@
 
 ```pwsh
 winget install jazzdelightsme.WingetPathUpdater # N.B. requires elevation!
-winget install vim
-vim test.txt # <-- read on if you don't understand why this WOULDN'T work...
+winget install git.git
+git -? # <-- read on if you don't understand why this WOULDN'T work...
 ```
 
 ## Background
@@ -72,13 +72,15 @@ We train people to just run “`winget <arguments>`”... but that does not have
 
 And here’s what the script will do:
 
-1. [If we are doing an "install",] read the current `PATH` values out of the registry (the “before” snapshot). This is possibly very different from what’s in memory, but that’s okay; this is just a reference point to find out what the installer has actually changed.
+1. [If we are doing an "install",] read the current `PATH`* values out of the registry (the “before” snapshot). This is possibly very different from what’s in memory, but that’s okay; this is just a reference point to find out what the installer has actually changed.
 2. Run `winget.exe`, passing through all arguments (`%*`/`$args`).
 3. Read the current `PATH` values out of the registry (the “after” snapshot), compare to “before” to see what the installer changed, and tack the additions onto the end of the in-memory environment values.
 
 Et voilà!
 
 (This is actually a pretty standard trick; to wrap things in a script wrapper for various reasons.)
+
+`*`: Note: the wrapper scripts actually update *all* environment variables, not just `PATH`. This is because sometimes people add "unexpanded" environment variable names to the `PATH` (so your `PATH` might be something like `C:\windows\system32;%VIMRUNTIME%`: we need to pick up the new `VIMRUNTIME` variable, too). Note that only **additions** are handled; if an installer deletes variables or reorders paths, the wrapper scripts ignore that.
 
 ## This package
 
