@@ -299,6 +299,11 @@ function GenerateAdditionsCmd
 
         if( $diff.Count )
         {
+            # We will update the environment variables in the current process first, using
+            # UpdateCurrentProcessEnvironment, in order to take advantage of the code to
+            # expand dependent variables. (See comments in that function.)
+            UpdateCurrentProcessEnvironment $diff
+
             $f = (Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())) + '.cmd'
 
             $lines = [System.Collections.Generic.List[string]]::new()
@@ -306,7 +311,9 @@ function GenerateAdditionsCmd
 
             foreach( $name in $diff.Keys )
             {
-                $lines.Add( "SET $name=$($diff[ $name ])" )
+                # N.B. We use the already-resolved value, rather than the raw value in
+                # $diff[ $name ].
+                $lines.Add( "SET $name=$(GetEnvVar $name 'Process')" )
             }
 
             [System.IO.File]::WriteAllLines( $f, $lines.ToArray() )
