@@ -105,3 +105,24 @@ winget install jazzdelightsme.WingetPathUpdater # N.B. requires elevation!
 
 Note that you cannot make your package depend on the WingetPathUpdater package, to automagically make your package findable on the `PATH` without any extra steps. That's because if a single `winget.exe` invocation installs WingetPathUpdater and your package, the wrapper scripts do not come into play at all. The WingetPathUpdater package *must* be installed separately; only when the `winget.exe` process that has done that returns will the wrapper scripts be able to "take effect" for subsequent invocations of "`winget`".
 
+## Bonus Reading
+
+From Raymond Chen, "The Old New Thing": ["What happens if I define one environment variable in terms of the value of another environment variable?"](https://devblogs.microsoft.com/oldnewthing/20231212-00/?p=109137).
+
+TechNet/MSDN/Microsoft blog platform du jour is ***notorious*** for moving stuff (or just deleting it) and breaking links, so let me summarize here: creating an in-memory "environment block" from the values stored in the registry happens in several steps, and the order has implications if you are trying to define one environment variable in terms of another. Raymond's "simplified for purposes of exposition" (good enough for me) list of steps is:
+
+ 1. Core system environment variables: `ALLUSERSPROFILE`, `ProgramData`, `PUBLIC`, `SystemDrive`, `SystemRoot`.
+ 2. System environment variables of type `REG_SZ`.
+ 3. System environment variables of type `REG_EXPAND_SZ`.
+ 4. Core user environment variables: `APPDATA`, `COMPUTERNAME`, `LOCALAPPDATA`, `ProgramFiles`, `USERPROFILE`.
+ 5. User environment variables of type `REG_SZ`.
+ 6. User environment variables of type `REG_EXPAND_SZ`.
+ 7. Account environment variables: `USERDNSDOMAIN`, `USERDOMAIN`, `USERNAME`.
+
+> "There is a bonus special rule for the `PATH` environment variable: The User definition of the `PATH` environment variable is appended to the System definition, rather than replacing it."
+
+Which leads to this word of caution:
+
+> "If you have a `REG_EXPAND_SZ` between variables at the same step, it is unspecified whether the expansion is the old value or the new value, so don’t do that."
+
+I would further add: there are loads of dodgy "install scripts" and such out there that do things like "hey I need to update an environment variable; I'll just take my current in-memory (fully expanded!) value and jam it back into the registry", without regard to whether certain values have significant, special runtime modifications (as with [`PSModulePath`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath)), and *without regard to whether things were `REG_EXPAND_SZ` values or not* (so they may end up whacking your carefully constructed environment-variable-relative-based scheme). So be careful trying to use such tactics--realize that once you've set it up, you'd best not change the value of the "base" variable, because people may have expanded it out behind your back.
