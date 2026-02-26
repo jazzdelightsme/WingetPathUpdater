@@ -26,7 +26,7 @@ param( [switch] $Force,
         # URL, plus the version info in the ARP registry values (DisplayVersion and
         # VersionMajor/VersionMinor). (And then each winget manifest has the installer
         # version as well, plus the URL of this script.)
-        [string] $Tag = 'v1.2'
+        [string] $Tag = 'v1.3'
      )
 
 try
@@ -344,4 +344,5 @@ catch
 
     exit -1
 }
+
 
