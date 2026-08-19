@@ -11,7 +11,7 @@ Describe 'WingetPathUpdater version metadata' {
     }
 
     It 'writes ARP version values for the 1.3 release' {
-        $installScriptContent | Should -Match "\[string\] \$Tag = 'v1\.3'"
+        $installScriptContent | Should -Match '\[string\] \$Tag = ''v1\.3'''
         $installScriptContent | Should -Match 'VersionMinor .* /d 3'
         $installScriptContent | Should -Match 'DisplayVersion /d 1\.3'
     }
