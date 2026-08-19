@@ -301,8 +301,8 @@ try
         $null = reg.exe add $keyPath /f /v NoModify /t REG_DWORD /d 1 ; checkRegResult
         $null = reg.exe add $keyPath /f /v NoRepair /t REG_DWORD /d 1 ; checkRegResult
         $null = reg.exe add $keyPath /f /v VersionMajor /t REG_DWORD /d 1 ; checkRegResult
-        $null = reg.exe add $keyPath /f /v VersionMinor /t REG_DWORD /d 2 ; checkRegResult
-        $null = reg.exe add $keyPath /f /v DisplayVersion /d 1.2 ; checkRegResult
+        $null = reg.exe add $keyPath /f /v VersionMinor /t REG_DWORD /d 3 ; checkRegResult
+        $null = reg.exe add $keyPath /f /v DisplayVersion /d 1.3 ; checkRegResult
         $null = reg.exe add $keyPath /f /v EstimatedSize /t REG_DWORD /d $sizeInKb ; checkRegResult
     }
 

@@ -25,7 +25,10 @@ try
     }
 
     Remove-Item .\coverage.xml -Force -EA Ignore
-    $result = invoke-pester .\WingetHelper.Tests.ps1 -CodeCoverage .\WingetHelper.ps1 -PassThru
+    $result = invoke-pester @(
+        '.\WingetHelper.Tests.ps1',
+        '.\WingetPathUpdaterInstall.Tests.ps1'
+    ) -CodeCoverage .\WingetHelper.ps1 -PassThru
 
     # These commands *should* NOT be covered by code coverage:
     $shouldBeMissed = @(
