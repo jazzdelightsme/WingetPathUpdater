@@ -141,7 +141,6 @@ try
     if( $InstallTests -or $Uninstall )
     {
         $fileUrls[ "$env:SystemRoot\System32\wingetHelper.Tests.ps1" ] = "${baseUrl}WingetHelper.Tests.ps1"
-        $fileUrls[ "$env:SystemRoot\System32\WingetPathUpdaterInstall.Tests.ps1" ] = "${baseUrl}WingetPathUpdaterInstall.Tests.ps1"
         $fileUrls[ "$env:SystemRoot\System32\RunWingetPathUpdaterTests.ps1" ] = "${baseUrl}RunWingetPathUpdaterTests.ps1"
     }
 
@@ -345,4 +344,3 @@ catch
 
     exit -1
 }
-
