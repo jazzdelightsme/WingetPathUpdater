@@ -24,7 +24,7 @@ param( [switch] $Force,
         #
         # When updating the version, there are two places to update in this file: this
         # URL, plus the version info in the ARP registry values (DisplayVersion and
-        # VersionMajor/VersionMinor). (And then each winget manifest has the installer
+        # VersionMajor/VersionMinor). (The published winget manifest has the installer
         # version as well, plus the URL of this script.)
         [string] $Tag = 'v1.3'
      )
@@ -141,6 +141,7 @@ try
     if( $InstallTests -or $Uninstall )
     {
         $fileUrls[ "$env:SystemRoot\System32\wingetHelper.Tests.ps1" ] = "${baseUrl}WingetHelper.Tests.ps1"
+        $fileUrls[ "$env:SystemRoot\System32\WingetPathUpdaterInstall.Tests.ps1" ] = "${baseUrl}WingetPathUpdaterInstall.Tests.ps1"
         $fileUrls[ "$env:SystemRoot\System32\RunWingetPathUpdaterTests.ps1" ] = "${baseUrl}RunWingetPathUpdaterTests.ps1"
     }
 
@@ -301,8 +302,8 @@ try
         $null = reg.exe add $keyPath /f /v NoModify /t REG_DWORD /d 1 ; checkRegResult
         $null = reg.exe add $keyPath /f /v NoRepair /t REG_DWORD /d 1 ; checkRegResult
         $null = reg.exe add $keyPath /f /v VersionMajor /t REG_DWORD /d 1 ; checkRegResult
-        $null = reg.exe add $keyPath /f /v VersionMinor /t REG_DWORD /d 2 ; checkRegResult
-        $null = reg.exe add $keyPath /f /v DisplayVersion /d 1.2 ; checkRegResult
+        $null = reg.exe add $keyPath /f /v VersionMinor /t REG_DWORD /d 3 ; checkRegResult
+        $null = reg.exe add $keyPath /f /v DisplayVersion /d 1.3 ; checkRegResult
         $null = reg.exe add $keyPath /f /v EstimatedSize /t REG_DWORD /d $sizeInKb ; checkRegResult
     }
 
@@ -344,5 +345,4 @@ catch
 
     exit -1
 }
-
 
